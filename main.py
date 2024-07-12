@@ -193,3 +193,15 @@ class PathFinder:
 
 astar = PathFinder(10, 5, 2, 10, 3)
 astar.start()
+
+
+
+
+def func(x):
+    return x + 1
+
+
+items = [1,5,8]
+
+items = list(map(func, items))
+print(items)
