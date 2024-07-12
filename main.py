@@ -87,8 +87,6 @@ class PathFinder:
 
         return path
 
-
-
     # vielleicht kann es hier ein error geben wenn der die surrounding nodes von einem an der ecke holen will
     def calculate(self):
         found = False
@@ -98,7 +96,7 @@ class PathFinder:
         stillAvailable.append(self.startNode)
         while len(stillAvailable) > 0:
             currentNode = stillAvailable[0]
-            
+
             for node in stillAvailable:
                 if node.fCost <= currentNode.fCost:
                     currentNode = node
@@ -126,9 +124,9 @@ class PathFinder:
                             stillAvailable.append(neighbor)
 
     def draw(self):
-        #os.system("cls" if os.name == "nt" else "clear")
+        # os.system("cls" if os.name == "nt" else "clear")
 
-        #Oberer Rand
+        # Oberer Rand
         print("_" * (self.width + 2))
 
         for y in range(self.height):
@@ -195,13 +193,11 @@ astar = PathFinder(10, 5, 2, 10, 3)
 astar.start()
 
 
-
-
 def func(x):
     return x + 1
 
 
-items = [1,5,8]
+items = [1, 5, 8]
 
 items = list(map(func, items))
 print(items)
