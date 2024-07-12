@@ -12,12 +12,13 @@ path_symbol = "x"
 class Node:
     def __init__(self, symbol) -> None:
         self.pos = None
-        self.gCost = None
-        self.hCost = None
-        self.fCost = None
-        self.surroundingNodes = []
-        self.explored = False
+
+        self.gCost = 1e9
+        self.hCost = 1e9
+        self.fCost = 1e9
+
         self.symbol = symbol
+        self.parent = None
 
 
 class Colors:
@@ -45,110 +46,89 @@ class PathFinder:
                 self.board[(x, y)] = node
 
         # setting the start, target and block symbols
-        startNode = Node(start_symbol)
-        startNode.pos = self.startPos
+        self.startNode = Node(start_symbol)
+        self.startNode.pos = self.startPos
 
-        targetNode = Node(target_symbol)
-        targetNode.pos = self.targetPos
+        self.targetNode = Node(target_symbol)
+        self.targetNode.pos = self.targetPos
 
-        self.board[self.startPos] = startNode
-        self.board[self.targetPos] = targetNode
+        self.board[self.startPos] = self.startNode
+        self.board[self.targetPos] = self.targetNode
 
         for blockPos in self.blocks:
             blockNode = Node(block_symbol)
             blockNode.pos = blockPos
             self.board[blockPos] = blockNode
 
-    def getSurroundingNodes(self, pos):
-        offsets = [(-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1)]
+    def getNeighbors(self, node):
         nodes = []
 
-        for offset in offsets:
-            try:
-                newPos = (pos[0] + offset[0], pos[1] + offset[1])
-                node = self.board[newPos]
-                nodes.append(node)
-            except:
-                pass
+        for x in range(-1, 2):  # -1 bis 1
+            for y in range(-1, 2):
+                if x != 0 and y != 0:  # (0,0) is just the current node
+
+                    checkX = node.pos[0] + x
+                    checkY = node.pos[1] + y
+
+                    # check if the neigbor is in bounds
+                    if checkX >= 0 and checkX < self.width and checkY >= 0 and checkY < self.height:
+                        nodes.append(self.board[checkX, checkY])
 
         return nodes
+
+    def retracePath(self, startNode, endNode):
+        currentNode = endNode  # start at the end
+        path = []
+        while currentNode != startNode:
+            path.append(currentNode)
+            currentNode = currentNode.parent  # parent ist der node woher der current node kommt
+
+        path.reverse()  # so we start at the beginning
+
+        return path
+
+
 
     # vielleicht kann es hier ein error geben wenn der die surrounding nodes von einem an der ecke holen will
     def calculate(self):
         found = False
-        currentNodePos = self.startPos
-        while not found:
-            surroundingNodes = self.getSurroundingNodes(currentNodePos)  # returns node instance
-            validNeighborNodes = []
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
-            self.draw()
-            print("Current node: ", currentNodePos)
-            print("Surrounding Nodes found: ", len(surroundingNodes))
+        alreadyEvaluated = set()
+        stillAvailable = []
 
-            print("All surrounding neighbor positions: ")
-            for n in surroundingNodes:
-                print(f"neighbor at: {n.pos}, Symbol: {n.symbol}, Explored: {n.explored}")
-            if len(surroundingNodes) == 0:
-                exit()
-            if len(surroundingNodes) > 0:
-                for neighbor in surroundingNodes:
+        stillAvailable.append(self.startNode)
+        while len(stillAvailable) > 0:
+            currentNode = stillAvailable[0]
+            
+            for node in stillAvailable:
+                if node.fCost <= currentNode.fCost:
+                    currentNode = node
+            stillAvailable.remove(currentNode)
+            alreadyEvaluated.add(currentNode)
 
-                    print("")
-                    # calc g cost -> dst to the starting node
-                    # calc h cost -> dst to the target node
-                    # clac f cost -> h cost * g cost
-                    # the smallest f cost node is choosen -> marked as closed (set it as currentNode)
-                    # if 2 or more nodes have the same f cost --> look at the h cost (dst to target) and pick the one with the lowest
+            if currentNode.pos == self.targetPos:
+                path = self.retracePath(self.startNode, self.targetNode)
+                for node in path:
+                    if node.symbol != target_symbol and node.symbol != start_symbol:
+                        self.board[node.pos] = Node(path_symbol)
+                return True
 
-                    # sobald eine node explored wurde wird sie als "closed" makiert (rot im video) -> das heißt die muss man nicht mehr exploren
-                    # es wird immer das node mit der niedrigsten f cost "explored", das node muss nicht umbedingt neighbor vom currentNode sein,
-                    # sondern kann überall sein -> das heißt man kann ganz links sein, merkt aber die f-cost wird immer höher, und plötzlich ist die
-                    # f-cost ganz rechts niedriger als alle ganz links, dann "explored" man natürlich das node ganz rechts
-                    # !! nodes die schon explored wurden werden natürlich nicht nochmal explored
-                    if neighbor.pos != None:  # out of board
-                        if neighbor.symbol != block_symbol:
-                            neighbor.gCost = self.calcDistanceOfTwoPositions(neighbor.pos, self.startPos)
-                            neighbor.hCost = self.calcDistanceOfTwoPositions(neighbor.pos, self.targetPos)
-                            neighbor.fCost = neighbor.gCost * neighbor.hCost
-                            validNeighborNodes.append(neighbor)
-                            print(f"currently checking node at: {neighbor.pos}, symbol: {neighbor.symbol}, already explored: {neighbor.explored}, f-cost: {neighbor.fCost}")
-                print(f"found: {len(validNeighborNodes)} valid neighbor nodes that could be explored!")
+            for neighbor in self.getNeighbors(currentNode):
+                if neighbor.symbol != block_symbol and not neighbor in alreadyEvaluated:
+                    newCostToNeighbor = currentNode.gCost + self.calcDistanceOfTwoPositions(currentNode.pos, neighbor.pos)
 
-                lowestFCost = 10e10
-                lowestFCostNode = None
-                for neighbor in validNeighborNodes:
-                    if neighbor.fCost != None:
-                        if neighbor.fCost < lowestFCost:
-                            if not neighbor.explored:
-                                lowestFCostNode = neighbor
-                print(f"Node with the lowest f-cost is at: {lowestFCostNode.pos}, symbol: {lowestFCostNode.symbol}, f-cost: {lowestFCostNode.fCost}")
+                    if newCostToNeighbor < neighbor.gCost or not neighbor in stillAvailable:
+                        neighbor.gCost = newCostToNeighbor
+                        neighbor.hCost = self.calcDistanceOfTwoPositions(neighbor.pos, self.targetNode.pos)
+                        neighbor.fCost = neighbor.gCost + neighbor.hCost
+                        neighbor.parent = currentNode
 
-                if lowestFCostNode != None:
-                    lowestFCostNode.explored = True
-                    currentNodePos = lowestFCostNode.pos
-                    print("setting the current node to: ", currentNodePos)
-                    if currentNodePos == self.targetPos:
-                        print("found the target pos!")
-                        return True
-                    self.board[currentNodePos] = Node(path_symbol)
-                
-                print("------------- end of iteration ---------------------")
+                        if not neighbor in stillAvailable:
+                            stillAvailable.append(neighbor)
 
     def draw(self):
-        # os.system("cls" if os.name == "nt" else "clear")
+        #os.system("cls" if os.name == "nt" else "clear")
 
-        # Oberer Rand
+        #Oberer Rand
         print("_" * (self.width + 2))
 
         for y in range(self.height):
@@ -177,8 +157,8 @@ class PathFinder:
         # loop
         self.initBoard()
         found = False
+        self.draw()
         while not found:
-            self.draw()
             found = self.calculate()
         self.draw()
 
@@ -211,5 +191,5 @@ class PathFinder:
                     break
 
 
-astar = PathFinder(110, 15, 100, 130, 90)
+astar = PathFinder(10, 5, 2, 10, 3)
 astar.start()
